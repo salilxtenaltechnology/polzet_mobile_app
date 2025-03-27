@@ -4,6 +4,7 @@ import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io'; // For SocketException
+import 'package:polzet_mobile_app/src/login_screen/Change_password.dart';
 import 'dart:async'; // For TimeoutException
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -20,7 +21,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   bool _isEmailSent = false; // To track if OTP has been sent
   bool _isLoading = false; // To show loading state
-  String _errorText = ''; // To display error messages
+  bool _isSendingOtp = false; // To show loading state for OTP sending
+  String _errorMessage = ''; // To display error messages
+  String _successMessage = ''; // To display success messages
+
+  // API endpoints
+  final String _forgotPasswordSendUrl = 'http://44.211.191.16:8080/api/forgot_password_email';
+  final String _forgotPasswordVerifyUrl = 'http://44.211.191.16:8080/api/forgot_password_verify';
 
   // Validate email format
   bool _isValidEmail(String email) {
@@ -32,95 +39,89 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   // Send OTP to the user's email
   Future<void> _sendOtp() async {
     if (!_isValidEmail(_emailController.text)) {
-      setState(() => _errorText = 'Please enter a valid email address.');
+      setState(() => _errorMessage = 'Please enter a valid email address.');
       return;
     }
 
     setState(() {
-      _isLoading = true;
-      _errorText = '';
+      _isSendingOtp = true;
+      _errorMessage = '';
+      _successMessage = '';
     });
 
     try {
       final response = await http.post(
-        Uri.parse('https://your-api-url/api/forgot_password_email'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode({
-          "email": _emailController.text,
-        }),
+        Uri.parse(_forgotPasswordSendUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': _emailController.text}),
       ).timeout(const Duration(seconds: 15));
 
       final responseData = json.decode(response.body);
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      if (response.statusCode == 200) {
         setState(() {
-          _isEmailSent = true; // OTP sent successfully
-          _errorText = '';
+          _isEmailSent = true;
+          _successMessage = 'OTP sent successfully!';
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('OTP sent to your email.')),
-        );
+      } else if (response.statusCode == 404) {
+        setState(() => _errorMessage = 'User with this email does not exist.');
       } else {
-        setState(() => _errorText = responseData['error']?.toString() ??
-            'Failed to send OTP. Please try again.');
+        setState(() => _errorMessage = responseData['message'] ?? 'Failed to send OTP');
       }
     } on SocketException {
-      setState(() => _errorText = 'Network error: Check internet connection.');
+      setState(() => _errorMessage = 'Network error: Check internet connection.');
     } on TimeoutException {
-      setState(() => _errorText = 'Connection timeout. Please try again.');
+      setState(() => _errorMessage = 'Connection timeout. Please try again.');
     } catch (e) {
-      setState(() => _errorText = 'Error: ${e.toString().replaceAll('Exception: ', '')}');
+      setState(() => _errorMessage = 'Error: ${e.toString().replaceAll('Exception: ', '')}');
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => _isSendingOtp = false);
     }
   }
 
   // Verify OTP entered by the user
   Future<void> _verifyOtp() async {
-    String otp = _otpControllers.map((controller) => controller.text).join();
-    if (otp.length < 6 || otp.contains(RegExp(r'[^0-9]'))) {
-      setState(() => _errorText = 'Please enter a valid 6-digit OTP.');
+    final otp = _otpControllers.map((c) => c.text).join();
+    if (otp.length != 6) {
+      setState(() => _errorMessage = 'Please enter all 6 digits');
       return;
     }
 
     setState(() {
       _isLoading = true;
-      _errorText = '';
+      _errorMessage = '';
+      _successMessage = '';
     });
 
     try {
       final response = await http.post(
-        Uri.parse('https://your-api-url/api/forgot_password_verify'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        Uri.parse(_forgotPasswordVerifyUrl),
+        headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          "email": _emailController.text,
-          "otp": otp,
+          'email': _emailController.text,
+          'otp': otp,
         }),
       ).timeout(const Duration(seconds: 15));
 
       final responseData = json.decode(response.body);
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('OTP verified successfully.')),
+      if (response.statusCode == 200) {
+        // Navigate to the ChangePasswordScreen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChangePasswordScreen(email: _emailController.text),
+          ),
         );
-        // Navigate to the reset password screen or perform other actions
       } else {
-        setState(() => _errorText = responseData['error']?.toString() ??
-            'Invalid OTP. Please try again.');
+        setState(() => _errorMessage = responseData['message'] ?? 'Invalid OTP');
       }
     } on SocketException {
-      setState(() => _errorText = 'Network error: Check internet connection.');
+      setState(() => _errorMessage = 'Network error: Check internet connection.');
     } on TimeoutException {
-      setState(() => _errorText = 'Connection timeout. Please try again.');
+      setState(() => _errorMessage = 'Connection timeout. Please try again.');
     } catch (e) {
-      setState(() => _errorText = 'Error: ${e.toString().replaceAll('Exception: ', '')}');
+      setState(() => _errorMessage = 'Error: ${e.toString().replaceAll('Exception: ', '')}');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -129,208 +130,256 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
-    final bool isTablet = SizerUtil.deviceType == DeviceType.tablet;
+    final bool isTablet = MediaQuery.of(context).size.width > 600;
 
     return SafeArea(
       child: Scaffold(
         body: Center(
           child: SingleChildScrollView(
             child: Container(
-              width: isTablet ? (isPortrait ? 70.w : 50.w) : (isPortrait ? 90.w : 70.w),
-              padding: EdgeInsets.symmetric(
-                horizontal: isTablet ? 4.w : 5.w,
-                vertical: isTablet ? 3.h : 4.h,
-              ),
+              padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 4.w),
+              width: isTablet ? (isPortrait ? 70.w : 50.w) : 90.w,
               decoration: BoxDecoration(
                 boxShadow: [BoxShadow(color: Colors.grey, blurRadius: 2.w)],
-                borderRadius: BorderRadius.circular(2.w),
+                borderRadius: BorderRadius.circular(5.w),
                 color: Colors.white,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header
                   Center(
                     child: Text(
-                      "Forgot Password",
+                      "POLZET",
                       style: TextStyle(
-                        fontSize: isTablet ? 20.sp : 24.sp,
+                        color: Colors.black,
+                        fontSize: isTablet ? 20.sp : 22.sp,
                         fontWeight: FontWeight.w600,
                         fontFamily: "Inter",
                       ),
                     ),
                   ),
-                  SizedBox(height: isTablet ? 2.h : 3.h),
-
-                  // Email Input
-                  TextField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      hintText: "Enter your email",
-                      hintStyle: TextStyle(
-                        color: const Color(0xFFAAAAAA),
+                  SizedBox(height: 1.5.h),
+                  Center(
+                    child: Text(
+                      "Forgot Password",
+                      style: TextStyle(
+                        color: Colors.grey,
                         fontSize: isTablet ? 12.sp : 14.sp,
-                        fontWeight: FontWeight.w400,
+                        fontWeight: FontWeight.w300,
                         fontFamily: "Inter",
                       ),
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: const Color(0xFFD9D9D9),
-                          width: 0.5.w,
-                        ),
-                        borderRadius: BorderRadius.circular(2.w),
-                      ),
-                    ),
-                    style: TextStyle(
-                      fontSize: isTablet ? 12.sp : 14.sp,
-                      fontWeight: FontWeight.w500,
-                      fontFamily: "Inter",
                     ),
                   ),
-                  SizedBox(height: isTablet ? 2.h : 3.h),
-
-                  // Send OTP Button
-                  if (!_isEmailSent)
-                    Center(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minWidth: isTablet ? 40.w : 50.w,
-                          maxWidth: 80.w,
-                        ),
-                        child: Container(
-                          height: isTablet ? 5.h : 6.h,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFF9B3046)),
-                            borderRadius: BorderRadius.circular(2.w),
-                          ),
-                          child: TextButton(
-                            onPressed: _isLoading ? null : _sendOtp,
-                            style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFF9B3046),
-                            ),
-                            child: _isLoading
-                                ? const CircularProgressIndicator(color: Color(0xFF9B3046))
-                                : Text(
-                              "Send OTP",
-                              style: TextStyle(
-                                fontSize: isTablet ? 12.sp : 14.sp,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: "Inter",
-                                color: const Color(0xFF9B3046),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  // OTP Section (Visible only after OTP is sent)
-                  if (_isEmailSent) ...[
-                    SizedBox(height: isTablet ? 3.h : 4.h),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4.w),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: List.generate(6, (index) {
-                          final boxSize = isTablet
-                              ? (isPortrait ? 8.w : 6.w)
-                              : 12.w;
-
-                          return SizedBox(
-                            width: boxSize,
-                            height: boxSize,
-                            child: TextField(
-                              controller: _otpControllers[index],
-                              focusNode: _otpFocusNodes[index],
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.center,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(1),
-                              ],
-                              decoration: InputDecoration(
-                                border: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                    color: const Color(0xFFD9D9D9),
-                                    width: 0.5.w,
+                  SizedBox(height: 2.h),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 5.w),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.alternate_email, color: Colors.grey, size: 14.sp),
+                            SizedBox(width: 2.w),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _emailController,
+                                decoration: InputDecoration(
+                                  hintText: "Email or Contact",
+                                  hintStyle: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.w400,
+                                    fontFamily: "Inter",
                                   ),
-                                  borderRadius: BorderRadius.circular(2.w),
+                                  border: InputBorder.none,
                                 ),
-                                contentPadding: EdgeInsets.zero,
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 13.sp,
+                                  fontWeight: FontWeight.w400,
+                                  fontFamily: "Inter",
+                                ),
                               ),
-                              style: TextStyle(
-                                fontSize: isTablet ? 12.sp : 14.sp,
-                                fontWeight: FontWeight.w500,
-                                fontFamily: "Inter",
-                              ),
-                              onChanged: (value) {
-                                if (value.isNotEmpty) {
-                                  if (index < 5) {
-                                    FocusScope.of(context).requestFocus(
-                                        _otpFocusNodes[index + 1]);
-                                  } else {
-                                    FocusScope.of(context).unfocus();
-                                  }
-                                }
-                              },
                             ),
-                          );
-                        }),
-                      ),
-                    ),
-
-                    // Verify OTP Button
-                    SizedBox(height: isTablet ? 2.h : 3.h),
-                    Center(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minWidth: isTablet ? 40.w : 50.w,
-                          maxWidth: 80.w,
+                            GestureDetector(
+                              onTap: _isSendingOtp ? null : _sendOtp,
+                              child: Container(
+                                padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.5.h),
+                                decoration: BoxDecoration(
+                                  color: Color(0xFFF0E4FF),
+                                  borderRadius: BorderRadius.circular(1.w),
+                                ),
+                                child: _isSendingOtp
+                                    ? SizedBox(
+                                  width: 14.sp,
+                                  height: 14.sp,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                                    : Text(
+                                    "Get OTP",
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w500,
+                                      fontFamily: "Inter",
+                                    )),
+                              ),
+                            ),
+                          ],
                         ),
-                        child: Container(
-                          height: isTablet ? 5.h : 6.h,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFF9B3046)),
-                            borderRadius: BorderRadius.circular(2.w),
-                          ),
-                          child: TextButton(
-                            onPressed: _isLoading ? null : _verifyOtp,
-                            style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFF9B3046),
+                        if (_errorMessage.isNotEmpty)
+                          Padding(
+                            padding: EdgeInsets.only(top: 1.h),
+                            child: Text(
+                              _errorMessage,
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w400,
+                              ),
                             ),
-                            child: _isLoading
-                                ? const CircularProgressIndicator(color: Color(0xFF9B3046))
-                                : Text(
+                          ),
+                        if (_successMessage.isNotEmpty)
+                          Padding(
+                            padding: EdgeInsets.only(top: 1.h),
+                            child: Text(
+                              _successMessage,
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ),
+                        Container(height: 0.1.h, color: Colors.grey),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 5.w),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final totalWidth = constraints.maxWidth;
+                        final boxSize = totalWidth / 8;
+                        final boxSpacing = 3.w;
+
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(6, (index) {
+                            return Padding(
+                              padding: EdgeInsets.symmetric(horizontal: boxSpacing / 2),
+                              child: SizedBox(
+                                width: boxSize,
+                                height: boxSize * 1.1,
+                                child: TextField(
+                                  controller: _otpControllers[index],
+                                  focusNode: _otpFocusNodes[index],
+                                  keyboardType: TextInputType.number,
+                                  textAlign: TextAlign.center,
+                                  cursorColor: Color(0xFF9B3046),
+                                  cursorHeight: 16.sp,
+                                  cursorWidth: 1.5,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                    LengthLimitingTextInputFormatter(1),
+                                  ],
+                                  decoration: InputDecoration(
+                                    border: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: _otpFocusNodes[index].hasFocus
+                                            ? Color(0xFF9B3046)
+                                            : Color(0xFFD9D9D9),
+                                        width: 1.2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(0.8.w),
+                                    ),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.w500,
+                                    fontFamily: "Inter",
+                                  ),
+                                  onChanged: (value) {
+                                    setState(() => _errorMessage = '');
+                                    if (value.isNotEmpty) {
+                                      if (index < 5) {
+                                        FocusScope.of(context).requestFocus(_otpFocusNodes[index + 1]);
+                                      } else {
+                                        FocusScope.of(context).unfocus();
+                                      }
+                                    } else {
+                                      if (index > 0) {
+                                        FocusScope.of(context).requestFocus(_otpFocusNodes[index - 1]);
+                                      }
+                                    }
+                                  },
+                                ),
+                              ),
+                            );
+                          }),
+                        );
+                      },
+                    ),
+                  ),
+                  SizedBox(height: 1.5.h),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
+                    child: Container(
+                      height: 5.5.h,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Color(0xFF9B3046), width: 1.3),
+                        borderRadius: BorderRadius.circular(2.w),
+                        color: Colors.transparent,
+                      ),
+                      child: TextButton(
+                        onPressed: _isLoading ? null : _verifyOtp,
+                        child: Center(
+                          child: _isLoading
+                              ? CircularProgressIndicator(color: Color(0xFF9B3046))
+                              : Text(
                               "Verify OTP",
                               style: TextStyle(
-                                fontSize: isTablet ? 12.sp : 14.sp,
+                                fontSize: 14.sp,
                                 fontWeight: FontWeight.w600,
                                 fontFamily: "Inter",
-                                color: const Color(0xFF9B3046),
+                                color: Color(0xFF9B3046),
+                              )),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 1.5.h),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Remember your password? ",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w400,
+                              fontFamily: "Inter",
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: Text(
+                              "Login",
+                              style: TextStyle(
+                                color: Color(0xFF9B3046),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13.sp,
+                                fontFamily: "Inter",
                               ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
-                  ],
-
-                  // Error Message
-                  if (_errorText.isNotEmpty)
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4.w),
-                      child: Text(
-                        _errorText,
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: isTablet ? 10.sp : 12.sp,
-                          fontWeight: FontWeight.w400,
-                          fontFamily: "Inter",
-                        ),
-                      ),
-                    ),
-                  SizedBox(height: isTablet ? 2.h : 3.h),
+                  ),
                 ],
               ),
             ),
@@ -338,5 +387,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _otpControllers) controller.dispose();
+    for (var node in _otpFocusNodes) node.dispose();
+    super.dispose();
   }
 }
