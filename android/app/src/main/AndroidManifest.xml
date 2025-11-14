@@ -1,20 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.polzet_mobile_app">
+    package="com.xtenal.polzet_mobile_app">
 
-    <!-- ✅ Add Internet permission (correct placement) -->
+    <!-- ✅ PERMISSIONS: All good, properly scoped with maxSdkVersion -->
     <uses-permission android:name="android.permission.INTERNET"/>
-
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" 
+                     android:maxSdkVersion="27" />
+     
     <application
-        android:label="polzet_mobile_app"
+        android:label="Polzet"
         android:name="${applicationName}"
-        android:usesCleartextTraffic="true"
-        android:icon="@mipmap/ic_launcher">
-
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="false">
+        
+        <!-- 🔒 SECURED: MainActivity with Intent validation -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
@@ -24,23 +29,80 @@
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
 
+            <!-- Launcher intent filter - MUST be exported -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- Deep link handling - Website and Backend -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                
+                <!-- Website deep links -->
+                <data 
+                    android:scheme="https"
+                    android:host="polzet.com"/>
+                <data 
+                    android:scheme="https"
+                    android:host="www.polzet.com"/>
+                
+                <!-- Backend deep links -->
+                <data 
+                    android:scheme="https"
+                    android:host="prodbackend.polzet.in"/>
+            </intent-filter>
         </activity>
 
-        <!-- Required by Flutter -->
+        <!-- ✅ UCrop Activity: Properly set to not exported -->
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
+        
+        <!-- ✅ FileProvider: Properly configured and not exported -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+        
+        <!-- ✅ Flutter v2 embedding metadata -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
 
-    <!-- Required for querying text-processing apps -->
+    <!-- ✅ QUERIES: Good for Android 11+ visibility -->
     <queries>
         <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+            <data android:scheme="tel" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
         </intent>
     </queries>
 </manifest>

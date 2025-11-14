@@ -1,0 +1,20 @@
+{
+  "buildFiles": [
+    "/Users/pratik.patadiyaicloud/flutter/packages/flutter_tools/gradle/src/main/groovy/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/pratik.patadiyaicloud/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/pratik.patadiyaicloud/Documents/GitHub/polzet_mobile_app/android/app/.cxx/RelWithDebInfo/1u344i4h/x86",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/pratik.patadiyaicloud/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/pratik.patadiyaicloud/Documents/GitHub/polzet_mobile_app/android/app/.cxx/RelWithDebInfo/1u344i4h/x86",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {}
+}

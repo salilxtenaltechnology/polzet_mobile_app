@@ -1,0 +1,2 @@
+/Users/pratik.patadiyaicloud/Documents/GitHub/polzet_mobile_app/android/app/.cxx/RelWithDebInfo/1u344i4h/x86/CMakeFiles/edit_cache.dir
+/Users/pratik.patadiyaicloud/Documents/GitHub/polzet_mobile_app/android/app/.cxx/RelWithDebInfo/1u344i4h/x86/CMakeFiles/rebuild_cache.dir
