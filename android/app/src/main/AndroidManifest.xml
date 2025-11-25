@@ -2,68 +2,75 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.xtenal.polzet_mobile_app">
 
-    <!-- ✅ PERMISSIONS: All good, properly scoped with maxSdkVersion -->
+    <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
-    <uses-permission android:name="android.permission.USE_FINGERPRINT" 
-                     android:maxSdkVersion="27" />
-     
+    <uses-permission android:name="android.permission.USE_FINGERPRINT"
+        android:maxSdkVersion="27"/>
+
     <application
         android:label="Polzet"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:usesCleartextTraffic="false">
-        
-        <!-- 🔒 SECURED: MainActivity with Intent validation -->
+
+        <!-- MAIN ACTIVITY -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode">
 
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
 
-            <!-- Launcher intent filter - MUST be exported -->
+            <!-- Launcher -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
-            <!-- Deep link handling - Website and Backend -->
+            <!-- Deep links (SPLIT for Play Protect compliance) -->
+
+            <!-- polzet.com -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                
-                <!-- Website deep links -->
-                <data 
-                    android:scheme="https"
-                    android:host="polzet.com"/>
-                <data 
-                    android:scheme="https"
-                    android:host="www.polzet.com"/>
-                
-                <!-- Backend deep links -->
-                <data 
-                    android:scheme="https"
-                    android:host="prodbackend.polzet.in"/>
+                <data android:scheme="https" android:host="polzet.com" />
             </intent-filter>
+
+            <!-- www.polzet.com -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="www.polzet.com" />
+            </intent-filter>
+
+            <!-- prodbackend.polzet.in -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="prodbackend.polzet.in" />
+            </intent-filter>
+
         </activity>
 
-        <!-- ✅ UCrop Activity: Properly set to not exported -->
+        <!-- UCrop -->
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
-        
-        <!-- ✅ FileProvider: Properly configured and not exported -->
+
+        <!-- FileProvider -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -73,14 +80,14 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
-        
-        <!-- ✅ Flutter v2 embedding metadata -->
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
     </application>
 
-    <!-- ✅ QUERIES: Good for Android 11+ visibility -->
+    <!-- QUERIES (Android 11 package visibility) -->
     <queries>
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
@@ -105,4 +112,5 @@
             <data android:scheme="mailto" />
         </intent>
     </queries>
+
 </manifest>

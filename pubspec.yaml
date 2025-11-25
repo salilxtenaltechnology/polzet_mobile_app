@@ -1,6 +1,6 @@
 name: polzet_mobile_app
 description: A new Flutter project
-
+version: 2.0.4+33
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
