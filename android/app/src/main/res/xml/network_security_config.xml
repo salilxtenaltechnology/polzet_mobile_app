@@ -31,13 +31,19 @@
     </domain-config>
     
     <!-- 🔧 DEBUG ONLY: Allow localhost for development -->
-    <!-- Remove this block in production if not needed -->
+    <!-- This will ONLY apply in debug builds, not in release builds -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">10.0.3.2</domain>
+    </domain-config>
+    
+    <!-- 🔓 Debug overrides for development (trusts user certificates) -->
     <debug-overrides>
-        <domain-config cleartextTrafficPermitted="true">
-            <domain includeSubdomains="true">localhost</domain>
-            <domain includeSubdomains="true">127.0.0.1</domain>
-            <domain includeSubdomains="true">10.0.2.2</domain>
-            <domain includeSubdomains="true">10.0.3.2</domain>
-        </domain-config>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
     </debug-overrides>
 </network-security-config>

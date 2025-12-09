@@ -42,24 +42,13 @@ class BiometricService {
     try {
       final bool isAuthenticated = await _localAuth.authenticate(
         localizedReason: reason,
-        authMessages: const [
+        authMessages: const <AuthMessages>[
           AndroidAuthMessages(
             signInTitle: 'Biometric Authentication',
             cancelButton: 'No thanks',
-            biometricHint: 'Verify your identity',
-            biometricRequiredTitle: 'Biometric required',
-            biometricSuccess: 'Biometric authentication succeeded',
-            deviceCredentialsRequiredTitle: 'Device credentials required',
-            deviceCredentialsSetupDescription: 'Device credentials required',
-            goToSettingsButton: 'Go to settings',
-            goToSettingsDescription: 'Set up your biometric',
           ),
         ],
-        options: AuthenticationOptions(
-          useErrorDialogs: useErrorDialogs,
-          stickyAuth: stickyAuth,
-          biometricOnly: false,
-        ),
+        biometricOnly: true,
       );
       return isAuthenticated;
     } on PlatformException catch (e) {

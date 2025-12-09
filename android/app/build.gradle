@@ -46,9 +46,9 @@ android {
     defaultConfig {
         applicationId = "com.xtenal.polzet_mobile_app"
         minSdkVersion = flutter.minSdkVersion
-        targetSdk = 36  // Updated from 35 to 36
-        versionCode = 33
-        versionName = "2.0.4"
+        targetSdk = 35  // Updated from 35 to 36
+        versionCode = 38
+        versionName = "2.0.5"
 
         ndk {
             abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
@@ -94,5 +94,10 @@ flutter {
 }
 
 dependencies {
+    implementation 'androidx.core:core:1.13.1'
+    implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+    
+    // Add OkHttp for ucrop compatibility
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
 }

@@ -764,13 +764,16 @@ class ProfileState extends State<UserProfile>
                   if (posts.isEmpty) {
                     return Center(
                       child: DottedBorder(
-                        strokeWidth: 1.8,
-                        dashPattern: [6, 4],
-                        radius: Radius.circular(5.r),
-                        borderType: BorderType.RRect,
-                        color: AppColors.primaryColor.withOpacity(0.6),
-                        borderPadding: EdgeInsets.zero,
-                        padding: EdgeInsets.zero,
+                        options: CustomPathDottedBorderOptions(
+                          strokeWidth: 1.8,
+                          dashPattern: [6, 4],
+                          customPath: (size) => Path()
+                            ..moveTo(0, size.height)
+                            ..relativeLineTo(size.width, 0),
+                          color: AppColors.primaryColor.withOpacity(0.6),
+                          borderPadding: EdgeInsets.zero,
+                          padding: EdgeInsets.zero,
+                        ),
                         child: GestureDetector(
                           onTap: () {
                             navigationPush(context, AddPollImage());
@@ -921,13 +924,16 @@ class ProfileState extends State<UserProfile>
                     padding:
                         EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                     child: DottedBorder(
-                      strokeWidth: 1.8,
-                      dashPattern: const [6, 4],
-                      radius: Radius.circular(5.r),
-                      borderType: BorderType.RRect,
-                      color: AppColors.primaryColor.withOpacity(0.6),
-                      borderPadding: EdgeInsets.zero,
-                      padding: EdgeInsets.zero,
+                      options: CustomPathDottedBorderOptions(
+                          strokeWidth: 1.8,
+                          dashPattern: [6, 4],
+                          customPath: (size) => Path()
+                            ..moveTo(0, size.height)
+                            ..relativeLineTo(size.width, 0),
+                          color: AppColors.primaryColor.withOpacity(0.6),
+                          borderPadding: EdgeInsets.zero,
+                          padding: EdgeInsets.zero,
+                        ),
                       child: Container(
                         height: 100.h,
                         width: double.infinity,

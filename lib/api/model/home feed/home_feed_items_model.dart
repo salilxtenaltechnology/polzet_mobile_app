@@ -301,10 +301,10 @@ class HomeFeedPollOption {
     return int.tryParse(value.toString()) ?? 0;
   }
 
-  static String _parseToString(dynamic value) {
-    if (value == null) return '';
-    return value.toString();
-  }
+ static String _parseToString(dynamic value) {
+  if (value == null) return '';
+  return value.toString();
+}
 }
 
 // Wrapper class for the API response

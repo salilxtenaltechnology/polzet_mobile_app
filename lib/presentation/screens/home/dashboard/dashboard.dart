@@ -223,10 +223,9 @@ class DashboardState extends State<Dashboard> with UtilityMixin {
 
   @override
   Widget build(BuildContext context) {
-    return ConnectivityWrapper(
-      child: Scaffold(
+    return  Scaffold(
           backgroundColor: Theme.of(context).colorScheme.background,
-          body: _buildBody()),
+          body: _buildBody()
     );
   }
 
@@ -298,7 +297,7 @@ class DashboardState extends State<Dashboard> with UtilityMixin {
               return HomeFeedPostCard(
                   post: post,
                   onPressed: () {
-                    // navigationPush(context, PublicProfile(userId: post.id));
+                   // navigationPush(context, PublicProfile(userId: post.id));
                   });
             },
           ),

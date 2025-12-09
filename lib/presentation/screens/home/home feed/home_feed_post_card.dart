@@ -34,7 +34,8 @@ class _HomeFeedPostCardState extends State<HomeFeedPostCard> {
   late Random random;
   List<int> selectionOrder = []; // Track the order of selection
 
-  Map<String, int?> selectedOptions = {};
+  // Changed to support multiple selections per poll
+  Map<String, List<int>> selectedOptions = {};
 
   // Get the selection number for an image (1, 2, 3, etc.)
   int getSelectionNumber(int imageNumber) {
@@ -104,7 +105,7 @@ class _HomeFeedPostCardState extends State<HomeFeedPostCard> {
           .shrink(); // Don't show posts with empty images and polls
     }
 
-    return Stack(
+    return Column(
       children: [
         Container(
           margin: EdgeInsets.only(bottom: 15.h),
@@ -179,20 +180,10 @@ class _HomeFeedPostCardState extends State<HomeFeedPostCard> {
                   ],
                 ),
 
-                // Images Section
-                //  if (hasImages) _buildImagesSection(context),
-                if (hasImages)
-                  GestureDetector(
-                    onTap: widget.onPressed,
-                    child: Container(
-                        height: 145.h,
-                        margin: EdgeInsets.only(top: 8.h),
-                        child: _buildImagesStack(randomImageIndices
-                            .map((index) => widget.post.images[index])
-                            .toList())),
-                  ),
+                // Images Section - Only when hasImages is true AND hasPolls is false
+                if (hasImages) _buildImagesSection(context),
 
-                // Polls Section
+                // Polls Section - Only when hasPolls is true AND hasImages is false
                 if (hasPolls) _buildPollsSection(context),
 
                 // Action buttons
@@ -239,6 +230,7 @@ class _HomeFeedPostCardState extends State<HomeFeedPostCard> {
                       duration: Duration(milliseconds: 300),
                       opacity: 1.0,
                       child: Container(
+                        margin: EdgeInsets.only(top: 10.h),
                         height: 45.h,
                         width: 45.w,
                         decoration: BoxDecoration(
@@ -485,42 +477,128 @@ class _HomeFeedPostCardState extends State<HomeFeedPostCard> {
     return const SizedBox.shrink();
   }
 
-  Widget _buildPollsSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: widget.post.polls.map((poll) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 5.h),
-            Text(
-              poll.question,
-              style: TextStyle(
-                  color: Theme.of(context).colorScheme.onBackground,
-                  fontSize: 12.5.sp,
-                  fontWeight: FontWeight.w500),
+ Widget _buildPollsSection(BuildContext context) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: widget.post.polls.map((poll) {
+      // Check if any option has null or empty text
+      bool hasInvalidOption = poll.options.any((option) => option.text.isEmpty);
+      
+      // If any option is invalid, don't render this poll at all
+      if (hasInvalidOption) {
+        return SizedBox.shrink();
+      }
+
+      // Check if all options in this poll are selected
+      String pollKey = poll.id.toString();
+      bool areAllOptionsSelected = _areAllPollOptionsSelected(poll);
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(height: 5.h),
+          Text(
+            poll.question,
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onBackground,
+                fontSize: 12.5.sp,
+                fontWeight: FontWeight.w500),
+          ),
+          SizedBox(height: 10.h),
+          ...poll.options.asMap().entries.map((entry) => _buildPollOption(
+                entry.value,
+                poll.totalVotes,
+                context,
+                entry.key,
+                poll,
+              )),
+          SizedBox(height: 5.h),
+          Text(
+            '${poll.totalVotes.toString()} Votes',
+            style: TextStyle(
+              fontSize: 10.7.sp,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[600],
             ),
-            SizedBox(height: 10.h),
-            ...poll.options.map((option) => _buildPollOption(
-                  option,
-                  poll.totalVotes,
-                  context,
-                  poll.options.indexOf(option),
-                  poll, // Pass the poll object to access selected option
-                )),
-            SizedBox(height: 5.h),
-            Text(
-              '${poll.totalVotes.toString()} Votes',
-              style: TextStyle(
-                fontSize: 10.7.sp,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[600],
+          ),
+
+          // Show analytics button when all options are selected
+          if (areAllOptionsSelected)
+            Center(
+              child: AnimatedOpacity(
+                duration: Duration(milliseconds: 300),
+                opacity: 1.0,
+                child: Container(
+                  margin: EdgeInsets.only(top: 10.h),
+                  height: 45.h,
+                  width: 45.w,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFFCF4B73),
+                        Color(0xFFC76294),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onBackground
+                            .withOpacity(0.3),
+                        blurRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.stacked_bar_chart,
+                    color: Colors.white,
+                    size: 20.spMax,
+                  ),
+                ),
               ),
             ),
-          ],
-        );
-      }).toList(),
-    );
+        ],
+      );
+    }).toList(),
+  );
+}
+
+// Helper method to check if all options in a poll are selected
+  bool _areAllPollOptionsSelected(HomeFeedPoll poll) {
+    String pollKey = poll.id.toString();
+
+    // Check if this poll has selections and if all options are selected
+    if (!selectedOptions.containsKey(pollKey)) {
+      return false;
+    }
+
+    // Count only valid options (non-empty text)
+    int validOptionsCount =
+        poll.options.where((option) => option.text.isNotEmpty).length;
+
+    return selectedOptions[pollKey]!.length == validOptionsCount;
+  }
+
+// Helper method to get selection number for an option
+  int? _getSelectionNumber(String pollKey, int optionIndex) {
+    if (!selectedOptions.containsKey(pollKey)) {
+      return null;
+    }
+
+    // Get the list of selected indices in order of selection
+    List<int> selected = selectedOptions[pollKey]!;
+
+    // If this option is not selected, return null
+    if (!selected.contains(optionIndex)) {
+      return null;
+    }
+
+    // Return the position (1-indexed) based on when it was selected
+    return selected.indexOf(optionIndex) + 1;
   }
 
   Widget _buildPollOption(HomeFeedPollOption option, int totalVotes,
@@ -544,127 +622,133 @@ class _HomeFeedPostCardState extends State<HomeFeedPostCard> {
     int percentage_full = 100;
     int total_vote_count = ((option.voteCount * 100) / percentage_full).round();
 
-    // Check if this option is selected using poll ID and option index
-    String pollKey = poll.id.toString(); // Use poll ID or hashCode
-    bool isSelected = selectedOptions[pollKey] == optionIndex;
+    // Check if this option is selected
+    String pollKey = poll.id.toString();
+    bool isSelected = selectedOptions.containsKey(pollKey) &&
+        selectedOptions[pollKey]!.contains(optionIndex);
+
+    // Get selection number
+    int? selectionNumber = _getSelectionNumber(pollKey, optionIndex);
 
     return GestureDetector(
       onTap: () {
-        // Handle option selection
+        // Handle option selection/deselection
         setState(() {
-          if (selectedOptions[pollKey] == optionIndex) {
+          // Initialize the list if it doesn't exist
+          if (!selectedOptions.containsKey(pollKey)) {
+            selectedOptions[pollKey] = [];
+          }
+
+          // Toggle selection
+          if (selectedOptions[pollKey]!.contains(optionIndex)) {
             // If already selected, unselect it
-            selectedOptions[pollKey] = null;
+            selectedOptions[pollKey]!.remove(optionIndex);
           } else {
-            // If not selected, select it
-            selectedOptions[pollKey] = optionIndex;
+            // If not selected, add it to the end (preserves selection order)
+            selectedOptions[pollKey]!.add(optionIndex);
           }
         });
-        // Add your vote logic here
       },
       child: Container(
+        margin: EdgeInsets.only(bottom: 8.h),
         padding: EdgeInsets.all(5.w),
         decoration: BoxDecoration(
           border: isSelected
-              ? Border.all(color: Theme.of(context).primaryColor, width: 1.5)
+              ? Border.all(
+                  color: Theme.of(context).primaryColor.withOpacity(0.8),
+                  width: 1.1)
               : Border.all(color: Colors.transparent, width: 1.5),
           borderRadius: BorderRadius.circular(8.r),
+          color: isSelected
+              ? const Color.fromARGB(24, 0, 0, 0)
+              : Colors.transparent,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            Text(
-              option.text,
-              style: TextStyle(
-                  color: Theme.of(context).colorScheme.onBackground,
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w500),
-            ),
-            SizedBox(height: 5.h),
-            Container(
-              height: 5.h,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey[200], // Grey background for unfilled area
-                borderRadius: BorderRadius.circular(4.r),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(4.r),
-                child: Stack(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    // Only show filled area if total_vote_count > 0
-                    if (total_vote_count > 0)
-                      FractionallySizedBox(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: total_vote_count / 100,
-                        child: Container(
-                          height: 8.h,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: gradientColors,
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                            ),
-                          ),
-                        ),
+                    // Show selection number if selected
+                    Expanded(
+                      child: Text(
+                        option.text,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onBackground,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w500),
                       ),
+                    ),
                   ],
                 ),
-              ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  '${total_vote_count.toInt()}%',
-                  style: TextStyle(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[600],
+                SizedBox(height: 5.h),
+                Container(
+                  height: 5.h,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color:
+                        Colors.grey[200], // Grey background for unfilled area
+                    borderRadius: BorderRadius.circular(4.r),
                   ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4.r),
+                    child: Stack(
+                      children: [
+                        // Only show filled area if total_vote_count > 0
+                        if (total_vote_count > 0)
+                          FractionallySizedBox(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: total_vote_count / 100,
+                            child: Container(
+                              height: 8.h,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: gradientColors,
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${total_vote_count.toInt()}%',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            AnimatedSwitcher(
-              duration: Duration(milliseconds: 200),
-              transitionBuilder: (child, animation) {
-                return ScaleTransition(
-                  scale: animation,
-                  child: FadeTransition(opacity: animation, child: child),
-                );
-              },
-              child: isSelected
-                  ? Container(
-                      height: 40.h,
-                      width: 40.w,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFFCF4B73),
-                            Color(0xFFC76294),
-                          ],
+            isSelected
+                ? Container(
+                    width: double.infinity,
+                    child: Center(
+                      child: Text(
+                        '$selectionNumber',
+                        style: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.8),
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onBackground
-                                .withOpacity(0.3),
-                            blurRadius: 5,
-                          ),
-                        ],
                       ),
-                      child: Icon(
-                        Icons.stacked_bar_chart,
-                        color: Colors.white,
-                        size: 20.spMax,
-                      ),
-                    )
-                  : SizedBox.shrink(), // hidden when false
-            )
+                    ),
+                  )
+                : SizedBox.shrink(),
           ],
         ),
       ),
