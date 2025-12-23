@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../api/api_service.dart';
+import '../api/services/api_service.dart';
 
 class AuthProvider with ChangeNotifier {
   bool isLoading = false;

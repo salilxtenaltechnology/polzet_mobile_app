@@ -1,8 +1,10 @@
+// ignore_for_file: non_constant_identifier_names, strict_top_level_inference
+
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:typed_data';
-import '../api/api_service.dart';
-import '../api/model/user/user_model.dart';
+import '../api/services/api_service.dart';
+import '../models/user/user_model.dart';
 
 class UserProvider with ChangeNotifier {
   final ApiService apiService = ApiService();
@@ -33,7 +35,6 @@ class UserProvider with ChangeNotifier {
 
     try {
       var data = await apiService.fetchUserData();
-      await apiService.getFollowersList();
       username = data?['username'];
       firstName = data?['first_name'];
       lastName = data?['last_name'];
@@ -63,7 +64,6 @@ class UserProvider with ChangeNotifier {
     // Don't change isLoading state to avoid showing loading indicators
     try {
       var data = await apiService.fetchUserData();
-
       // Update all fields with fresh data
       username = data?['username'];
       firstName = data?['first_name'];
@@ -178,8 +178,10 @@ class UserProvider with ChangeNotifier {
   Uint8List? getProfileImage(profile_picture) {
     if (profile_picture == null || profile_picture.isEmpty) return null;
     try {
-      String base64Data =
-          profile_picture.replaceFirst(RegExp(r'data:image/[^;]+;base64,'), '');
+      String base64Data = profile_picture.replaceFirst(
+        RegExp(r'data:image/[^;]+;base64,'),
+        '',
+      );
       return base64Decode(base64Data);
     } catch (e) {
       return null;
@@ -189,21 +191,14 @@ class UserProvider with ChangeNotifier {
   Uint8List? getCoverImage(cover_photo) {
     if (cover_photo == null || cover_photo.isEmpty) return null;
     try {
-      String base64Data =
-          cover_photo.replaceFirst(RegExp(r'data:image/[^;]+;base64,'), '');
+      String base64Data = cover_photo.replaceFirst(
+        RegExp(r'data:image/[^;]+;base64,'),
+        '',
+      );
       return base64Decode(base64Data);
     } catch (e) {
       return null;
     }
   }
 
-  Future<bool> sendFriendRequest(String username) async {
-    try {
-      bool result = await ApiService().sendFriendRequest(username);
-      return result;
-    } catch (e) {
-      notifyListeners();
-      return false;
-    }
-  }
 }
